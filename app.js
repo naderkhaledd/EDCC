@@ -1,4 +1,4 @@
-﻿// Auth State
+// Auth State
 const ALLOWED_USERS = [
     { email: "ahmed.awad@egyptian-drilling.com", name: "Ahmed Awad" },
     { email: "ahmed.ibrahim@egyptian-drilling.com", name: "Ahmed Ibrahim", role: "Logistics Section Head" },
@@ -118,7 +118,13 @@ document.addEventListener("DOMContentLoaded", () => {
                         return item;
                     });
                     if (dataUpdated) {
-                        localStorage.setItem("edc_shipments_data", JSON.stringify(shipmentsData));
+                                    try {
+                localStorage.setItem("edc_shipments_data", JSON.stringify(shipmentsData));
+            } catch(e) {
+                if (typeof localforage !== 'undefined') {
+                    localforage.setItem("edc_shipments_data", shipmentsData).catch(err => console.error(err));
+                }
+            }
                     }
                 }
             } catch (e) { 
@@ -128,8 +134,8 @@ document.addEventListener("DOMContentLoaded", () => {
             needsInitialSeed = true;
         }
         
-        if (needsInitialSeed && typeof realShipmentsData !== 'undefined' && realShipmentsData.length > 0) {
-            shipmentsData = realShipmentsData.map((item, index) => {
+        if (needsInitialSeed && typeof initialShipments !== 'undefined' && initialShipments.length > 0) {
+            shipmentsData = initialShipments.map((item, index) => {
                 const mrVal = String(item.id || '').trim();
                 const poVal = String(item.poNo || '').trim();
                 return {
@@ -138,7 +144,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     id: poVal ? `${mrVal}_${poVal}` : `${mrVal}_seed_${index}`,
                 };
             });
-            localStorage.setItem("edc_shipments_data", JSON.stringify(shipmentsData));
+                        try {
+                localStorage.setItem("edc_shipments_data", JSON.stringify(shipmentsData));
+            } catch(e) {
+                if (typeof localforage !== 'undefined') {
+                    localforage.setItem("edc_shipments_data", shipmentsData).catch(err => console.error(err));
+                }
+            }
         }
         
         sortShipmentsData();
@@ -547,7 +559,13 @@ function sortShipmentsData() {
 function saveToLocalStorage() {
     sortShipmentsData();
     try {
-        localStorage.setItem("edc_shipments_data", JSON.stringify(shipmentsData));
+                    try {
+                localStorage.setItem("edc_shipments_data", JSON.stringify(shipmentsData));
+            } catch(e) {
+                if (typeof localforage !== 'undefined') {
+                    localforage.setItem("edc_shipments_data", shipmentsData).catch(err => console.error(err));
+                }
+            }
     } catch(e) {
         if (typeof localforage !== 'undefined') {
             localforage.setItem("edc_shipments_data", shipmentsData).catch(err => console.error("LocalForage Save Error", err));
