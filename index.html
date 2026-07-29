@@ -1,14 +1,1298 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/EDCC/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EDC Logistics - Master Data Portal</title>
-    <script type="module" crossorigin src="/EDCC/assets/index-5DJu7Qts.js"></script>
-    <link rel="stylesheet" crossorigin href="/EDCC/assets/index-Z6zo9PUh.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDC Logistics</title>
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- SheetJS (XLSX) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="style.css?v=2">
+
+    <!-- Debug Error Banner -->
+    <script>
+        window.addEventListener('error', function(e) {
+            var banner = document.getElementById('debug-error-banner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'debug-error-banner';
+                banner.style.position = 'fixed';
+                banner.style.top = '0';
+                banner.style.left = '0';
+                banner.style.width = '100%';
+                banner.style.background = '#e11d48';
+                banner.style.color = 'white';
+                banner.style.padding = '12px 24px';
+                banner.style.fontFamily = 'monospace';
+                banner.style.fontSize = '14px';
+                banner.style.zIndex = '999999';
+                banner.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.1)';
+                banner.style.boxSizing = 'border-box';
+                document.body.insertBefore(banner, document.body.firstChild);
+            }
+            banner.innerHTML = '<strong>JavaScript Error:</strong> ' + e.message + ' at ' + e.filename + ':' + e.lineno + ':' + e.colno;
+        });
+    </script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <img src="logo.png" alt="EDC Logo" class="brand-logo-img">
+                <h2 class="brand-title">EDC Logistics</h2>
+            </div>
+            
+            <nav class="sidebar-menu">
+                <a href="#" class="menu-item active" id="btn-overview">
+                    <i data-lucide="layout-grid"></i>
+                    <span>Logistics Registry</span>
+                </a>
+                <a href="#" class="menu-item" id="btn-analytics">
+                    <i data-lucide="pie-chart"></i>
+                    <span>Dashboard Analytics</span>
+                </a>
+                <a href="#" class="menu-item" id="btn-search">
+                    <i data-lucide="search"></i>
+                    <span>Search Shipments</span>
+                </a>
+                <a href="#" class="menu-item" id="btn-create">
+                    <i data-lucide="plus-circle"></i>
+                    <span>Create Shipment</span>
+                </a>
+                <a href="#" class="menu-item hidden" id="btn-manager-panel">
+                    <i data-lucide="shield-check"></i>
+                    <span>Manager Panel</span>
+                </a>
+            </nav>
+            
+        </aside>
+
+        <!-- Main Dashboard Content -->
+        <main class="main-content">
+            <!-- Header Section -->
+            <header class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="header-info">
+                    <h1 id="page-title">EDC Logistics Registry</h1>
+                    <p class="subtitle" id="page-subtitle">Real-time supply chain tracking and shipment database</p>
+                </div>
+                <div class="header-actions" style="display: flex; gap: 0.8rem; align-items: center;">
+                    <button class="btn btn-outline" id="btn-login-modal" style="display: flex; align-items: center; gap: 0.6rem; text-align: left; padding: 0.4rem 0.8rem;">
+                        <i data-lucide="user"></i>
+                        <div style="display: flex; flex-direction: column; justify-content: center;">
+                            <span id="login-user-name" style="font-weight: 600; font-size: 0.875rem;">Login to Edit</span>
+                            <span id="login-user-role" class="hidden" style="font-size: 0.725rem; color: var(--text-secondary); margin-top: 2px;"></span>
+                        </div>
+                    </button>
+                </div>
+            </header>
+
+            <!-- 1. Dashboard Overview Panel (Registry Dashboard) -->
+            <section class="dashboard-panel" id="panel-overview">
+                <!-- KPI Grid -->
+                <div class="kpi-grid" id="registry-kpi-grid">
+                    <!-- Total Shipments Card -->
+                    <div class="kpi-card glass-card" id="kpi-total">
+                        <div class="kpi-header">
+                            <span class="kpi-title">Total Shipments</span>
+                            <div class="kpi-icon-box bg-blue">
+                                <i data-lucide="package"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="val-total">0</div>
+                        <div class="kpi-trend">
+                            <span class="trend-indicator pos" id="trend-total">
+                                <i data-lucide="package-open"></i> Count
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Delivered Card -->
+                    <div class="kpi-card glass-card" id="kpi-delivered">
+                        <div class="kpi-header">
+                            <span class="kpi-title">Delivered</span>
+                            <div class="kpi-icon-box bg-emerald">
+                                <i data-lucide="check-circle-2"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="val-delivered">0</div>
+                        <div class="kpi-trend">
+                            <span class="trend-indicator pos" id="trend-delivered">
+                                <i data-lucide="shield-check"></i> <span id="rate-delivered">0%</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- In Transit Card -->
+                    <div class="kpi-card glass-card" id="kpi-transit">
+                        <div class="kpi-header">
+                            <span class="kpi-title">In Transit</span>
+                            <div class="kpi-icon-box bg-amber">
+                                <i data-lucide="truck"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="val-transit">0</div>
+                        <div class="kpi-trend">
+                            <span class="trend-indicator neutral">
+                                <i data-lucide="clock"></i> Active
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Delayed Card -->
+                    <div class="kpi-card glass-card" id="kpi-delayed">
+                        <div class="kpi-header">
+                            <span class="kpi-title">Delayed</span>
+                            <div class="kpi-icon-box bg-rose">
+                                <i data-lucide="alert-triangle"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="val-delayed">0</div>
+                        <div class="kpi-trend">
+                            <span class="trend-indicator neg" id="trend-delayed">
+                                <i data-lucide="alert-circle"></i> Requires Review
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- Recent Shipments Summary Table -->
+                <div class="data-table-section glass-card" style="margin-top: 1rem;">
+                    <div class="table-header">
+                        <div class="table-title">
+                            <h3>Shipment Registry Table</h3>
+                            <p class="table-subtitle">Expanded tracking details of logistics registry</p>
+                        </div>
+                        <!-- Search & Filter Controls -->
+                        <div class="table-controls">
+                            <div class="search-box">
+                                <i data-lucide="search" class="search-icon"></i>
+                                <input type="text" id="overview-search-input" placeholder="Search MR No, Contractor, Rig, Vessel, ACID...">
+                            </div>
+
+                            <button class="btn btn-primary" id="overview-btn-trigger-search">
+                                <i data-lucide="search"></i>
+                                <span>Search</span>
+                            </button>
+
+                            <button class="btn btn-outline" id="overview-btn-export-current">
+                                <i data-lucide="file-spreadsheet"></i>
+                                <span>Export filtered</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Category Tabs inside Overview -->
+                    <div class="category-tabs-container search-tabs-spacer" style="margin-bottom: 1rem;">
+                        <div class="category-tabs" id="overview-category-tabs">
+                            <button class="category-tab active" data-status="all">
+                                <i data-lucide="list"></i>
+                                <span>All Shipments</span>
+                            </button>
+                            <button class="category-tab" data-status="In Transit">
+                                <i data-lucide="truck"></i>
+                                <span>In Transit</span>
+                            </button>
+                            <button class="category-tab" data-status="Delivered">
+                                <i data-lucide="check-circle-2"></i>
+                                <span>Delivered</span>
+                            </button>
+                            <button class="category-tab" data-status="Delayed">
+                                <i data-lucide="alert-triangle"></i>
+                                <span>Delayed</span>
+                            </button>
+                            <button class="category-tab" data-status="Pending">
+                                <i data-lucide="clock"></i>
+                                <span>Pending</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-container excel-theme">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>MR No</th>
+                                    <th>PO Number</th>
+                                    <th>PR</th>
+                                    <th>Shipment Ref</th>
+                                    <th>Entity Shipment</th>
+                                    <th>Status Date</th>
+                                    <th>Contractor</th>
+                                    <th>Rig No</th>
+                                    <th>Supplier</th>
+                                    <th>Status</th>
+                                    <th>Incoterm</th>
+                                    <th>Material Description</th>
+                                    <th>Freight Type</th>
+                                    <th>Port of Origin</th>
+                                    <th>Final Destination</th>
+                                    <th>Delivery Place</th>
+                                    <th>Vessel Name</th>
+                                    <th>Shipping Line / Air Line</th>
+                                    <th>B/L - AWB</th>
+                                    <th>ACID #</th>
+                                    <th>Freight Forwarder (Foreign)</th>
+                                    <th>Freight forwarder (Local)</th>
+                                    <th>Container No</th>
+                                    <th>Container Type</th>
+                                    <th>LCL</th>
+                                    <th class="text-right">20" Qty</th>
+                                    <th class="text-right">40" Qty</th>
+                                    <th class="text-right">PKG</th>
+                                    <th class="text-right">Weight (KG)</th>
+                                    <th>ETD</th>
+                                    <th>1st ETA</th>
+                                    <th>2nd ETA</th>
+                                    <th>3rd ETA</th>
+                                    <th>Final ETA</th>
+                                    <th>Sent To Operator Date</th>
+                                    <th>Received From Operator</th>
+                                    <th>Sent to FFW Date</th>
+                                    <th>Releasing Date</th>
+                                    <th>KPI Date</th>
+                                    <th class="text-right">Clearance (Days)</th>
+                                    <th>Custom Dec. Received</th>
+                                    <th>Custom Declaration No.</th>
+                                    <th>Custom Declaration Date</th>
+                                    <th class="text-right">Custom Declaration Value</th>
+                                    <th>Custom Certificate No.</th>
+                                    <th>Customs Receipt No.</th>
+                                    <th>Customs Receipt Date</th>
+                                    <th>Local Invoice No.</th>
+                                    <th class="text-right">Value in (F.C)</th>
+                                    <th>F.C</th>
+                                    <th class="text-right">Local Charges Official (EGP)</th>
+                                    <th class="text-right">Local Charges CCA (EGP)</th>
+                                    <th>Demurrage Invoice #</th>
+                                    <th class="text-right">Demurrage Value ($)</th>
+                                    <th>Foreign Invoice No.</th>
+                                    <th>Receiving Date</th>
+                                    <th class="text-right">Foreign Invoice Value</th>
+                                    <th class="text-right">Local Charges (USD)</th>
+                                    <th class="text-right">Final Shipment Charges (USD)</th>
+                                    <th>Cost /Rig</th>
+                                    <th>PR Rig</th>
+                                    <th>Remarks</th>
+                                    <th>Created By</th>
+                                    <th>Last Modified By</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summary-table-body">
+                                <!-- JS inserts rows here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Analytics Panel -->
+            <section class="dashboard-panel hidden" id="panel-analytics">
+                <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                    <!-- Total Count Card -->
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-header">
+                            <span class="kpi-title">Total Shipments</span>
+                            <div class="kpi-icon-box bg-blue">
+                                <i data-lucide="layers"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="val-analytic-total">0</div>
+                        <div class="kpi-trend">
+                            <span class="trend-indicator neutral">Including Received</span>
+                        </div>
+                    </div>
+
+                    <!-- Pending Air Freight Card -->
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-header">
+                            <span class="kpi-title">Pending Air Freight</span>
+                            <div class="kpi-icon-box bg-amber">
+                                <i data-lucide="plane"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="val-analytic-air">0</div>
+                        <div class="kpi-trend">
+                            <span class="trend-indicator pos">Not Received</span>
+                        </div>
+                    </div>
+
+                    <!-- Pending Sea Freight Card -->
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-header">
+                            <span class="kpi-title">Pending Sea Freight</span>
+                            <div class="kpi-icon-box bg-emerald">
+                                <i data-lucide="ship"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="val-analytic-sea">0</div>
+                        <div class="kpi-trend">
+                            <span class="trend-indicator pos">Not Received</span>
+                        </div>
+                    </div>
+
+                    <!-- Pending Free Zone Card -->
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-header">
+                            <span class="kpi-title">Pending Free Zone</span>
+                            <div class="kpi-icon-box bg-rose">
+                                <i data-lucide="box"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="val-analytic-fz">0</div>
+                        <div class="kpi-trend">
+                            <span class="trend-indicator pos">Not Received</span>
+                        </div>
+                    </div>
+
+                    <!-- Pending Land Freight Card -->
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-header">
+                            <span class="kpi-title">Pending Land Freight</span>
+                            <div class="kpi-icon-box bg-amber">
+                                <i data-lucide="truck"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="val-analytic-land">0</div>
+                        <div class="kpi-trend">
+                            <span class="trend-indicator pos">Not Received</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Manager Dashboard Panel -->
+            <section class="dashboard-panel hidden" id="panel-manager">
+                <!-- Financial Analytics section -->
+                <div class="table-title" style="margin-bottom: 1.5rem;">
+                    <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);"><i data-lucide="line-chart" style="vertical-align: middle; margin-right: 0.5rem;"></i>Executive Financial Analytics</h2>
+                    <p class="table-subtitle">Private financial summary for Logistics Manager</p>
+                    <button class="btn btn-secondary btn-sm" id="btn-migrate-firebase" style="margin-top: 0.5rem; background: var(--accent-purple); color: white; border: none; display: none;"><i data-lucide="cloud-upload"></i> Migrate Local Data to Firebase</button>
+                </div>
+                
+                <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+                    <!-- Total Foreign Currency Value -->
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-header">
+                            <span class="kpi-title">Total Value (F.C)</span>
+                            <div class="kpi-icon-box bg-purple">
+                                <i data-lucide="dollar-sign"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="mgr-val-fc" style="font-size: 1.4rem; white-space: normal; line-height: 1.4;">EGP 0 / USD 0</div>
+                        <div class="kpi-trend">
+                            <span class="trend-indicator pos">Combined Currencies</span>
+                        </div>
+                    </div>
+
+                    <!-- Total Local Charges EGP -->
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-header">
+                            <span class="kpi-title">Total Local Charges (EGP)</span>
+                            <div class="kpi-icon-box bg-emerald">
+                                <i data-lucide="coins"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="mgr-val-local-egp" style="font-size: 1.4rem; white-space: normal; line-height: 1.4;">EGP 0</div>
+                        <div class="kpi-trend">
+                            <span class="trend-indicator pos">Official + CCA</span>
+                        </div>
+                    </div>
+
+                    <!-- Total Shipment Charges (USD) -->
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-header">
+                            <span class="kpi-title">Final Shipment Charges (USD)</span>
+                            <div class="kpi-icon-box bg-blue">
+                                <i data-lucide="badge-dollar-sign"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="mgr-val-final-usd" style="font-size: 1.4rem; white-space: normal; line-height: 1.4;">$0</div>
+                        <div class="kpi-trend">
+                            <span class="trend-indicator pos">USD Equivalent</span>
+                        </div>
+                    </div>
+
+                    <!-- Total Demurrage Costs (USD) -->
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-header">
+                            <span class="kpi-title">Total Demurrage (USD)</span>
+                            <div class="kpi-icon-box" style="background: rgba(239, 68, 68, 0.1); color: var(--accent-orange); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                <i data-lucide="alert-triangle"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="mgr-val-demurrage" style="font-size: 1.4rem; white-space: normal; line-height: 1.4;">$0</div>
+                        <div class="kpi-trend">
+                            <span class="trend-indicator neg" style="color: var(--accent-orange);">Fines incurred</span>
+                        </div>
+                    </div>
+
+                    <!-- Avg Clearance Period -->
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-header">
+                            <span class="kpi-title">Avg Clearance Period</span>
+                            <div class="kpi-icon-box" style="background: rgba(168, 85, 247, 0.1); color: var(--accent-purple); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                <i data-lucide="clock"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="mgr-val-avg-clearance" style="font-size: 1.4rem; white-space: normal; line-height: 1.4;">0 Days</div>
+                        <div class="kpi-trend">
+                            <span class="trend-indicator pos">Clearance speed</span>
+                        </div>
+                    </div>
+
+                    <!-- Missing ACID Alerts -->
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-header">
+                            <span class="kpi-title">Missing ACID Alerts</span>
+                            <div class="kpi-icon-box" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                <i data-lucide="shield-alert"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="mgr-val-acid-alerts" style="font-size: 1.4rem; white-space: normal; line-height: 1.4; color: #ef4444;">0</div>
+                        <div class="kpi-trend">
+                            <span class="trend-indicator neg" style="color: #ef4444;">Active missing ACID</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rig Cost & Carrier Cost Breakdown -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                    <div class="data-table-section glass-card" style="margin-top: 0; padding: 1.25rem;">
+                        <div class="table-header">
+                            <div class="table-title">
+                                <h3>Total Cost per Rig</h3>
+                                <p class="table-subtitle">Accumulated final charges per active Rig</p>
+                            </div>
+                        </div>
+                        <div class="chart-container" style="position: relative; height: 250px; width: 100%; display: flex; justify-content: center; align-items: center;">
+                            <canvas id="mgr-chart-rig-costs"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="data-table-section glass-card" style="margin-top: 0; padding: 1.25rem;">
+                        <div class="table-header">
+                            <div class="table-title">
+                                <h3>Supplier Distribution</h3>
+                                <p class="table-subtitle">Shipment count & total value per Supplier</p>
+                            </div>
+                        </div>
+                        <div class="chart-container" style="position: relative; height: 250px; width: 100%; display: flex; justify-content: center; align-items: center;">
+                            <canvas id="mgr-chart-supplier-stats"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 1: Freight Type & Incoterms Breakdown -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                    <!-- Freight Type Spend Table -->
+                    <div class="data-table-section glass-card" style="margin-top: 0; padding: 1.25rem;">
+                        <div class="table-header">
+                            <div class="table-title">
+                                <h3>Freight Type Distribution</h3>
+                                <p class="table-subtitle">Spending and volume by Freight Type</p>
+                            </div>
+                        </div>
+                        <div class="chart-container" style="position: relative; height: 250px; width: 100%; display: flex; justify-content: center; align-items: center;">
+                            <canvas id="mgr-chart-freight-stats"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Incoterms Spend Table -->
+                    <div class="data-table-section glass-card" style="margin-top: 0; padding: 1.25rem;">
+                        <div class="table-header">
+                            <div class="table-title">
+                                <h3>Incoterms Cost Distribution</h3>
+                                <p class="table-subtitle">Contractual terms distribution & cost</p>
+                            </div>
+                        </div>
+                        <div class="chart-container" style="position: relative; height: 250px; width: 100%; display: flex; justify-content: center; align-items: center;">
+                            <canvas id="mgr-chart-incoterm-stats"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 2: Demurrage and Critical Shipments Alerts -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                    <!-- Demurrage by Supplier Table -->
+                    <div class="data-table-section glass-card" style="margin-top: 0; padding: 1.25rem;">
+                        <div class="table-header">
+                            <div class="table-title">
+                                <h3>Demurrage by Carrier/Supplier</h3>
+                                <p class="table-subtitle">Fines incurred grouped by carrier</p>
+                            </div>
+                        </div>
+                        <div class="table-container excel-theme" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Carrier/Supplier</th>
+                                        <th class="text-right">Shipments with Fines</th>
+                                        <th class="text-right">Total Demurrage (USD)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mgr-table-demurrage-stats">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Critical Shipments Alerts Table -->
+                    <div class="data-table-section glass-card" style="margin-top: 0; padding: 1.25rem;">
+                        <div class="table-header">
+                            <div class="table-title">
+                                <h3>Critical Shipment Alerts</h3>
+                                <p class="table-subtitle">Active shipments lacking ACID or delayed</p>
+                            </div>
+                        </div>
+                        <div class="table-container excel-theme" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>MR No</th>
+                                        <th>PO Number</th>
+                                        <th>Status</th>
+                                        <th>Issue Detected</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mgr-table-critical-alerts">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audit Trail / Activity Log -->
+                <div class="data-table-section glass-card" style="margin-top: 2rem; padding: 1.25rem;">
+                    <div class="table-header" style="flex-wrap: wrap; gap: 1rem; align-items: center;">
+                        <div class="table-title">
+                            <h3><i data-lucide="history" style="vertical-align: middle; margin-right: 0.5rem;"></i>System Activity Log (Audit Trail)</h3>
+                            <p class="table-subtitle">History of all shipments created or modified</p>
+                        </div>
+                        <div class="search-box" style="margin-left: auto; width: 300px; display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px;">
+                            <i data-lucide="search" class="search-icon" style="margin-right: 4px; color: var(--text-secondary);"></i>
+                            <input type="text" id="mgr-log-search" placeholder="Search user, action, ID..." style="background: none; border: none; outline: none; width: 100%; color: var(--text-primary);">
+                        </div>
+                    </div>
+                    <div class="table-container excel-theme" style="max-height: 350px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 1rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>User</th>
+                                    <th>Action Type</th>
+                                    <th>Shipment ID</th>
+                                    <th>PO No</th>
+                                    <th>Status</th>
+                                    <th>Changes Summary</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mgr-table-logs">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Search Shipments Panel -->
+            <section class="dashboard-panel hidden" id="panel-search">
+                <div class="data-table-section glass-card">
+                    <div class="table-header">
+                        <div class="table-title">
+                            <h3>Search and Filter Shipments</h3>
+                            <p class="table-subtitle" id="table-record-count">Showing 0 of 0 entries</p>
+                        </div>
+                        
+                        <!-- Search & Filter Controls -->
+                        <div class="table-controls">
+                            <div class="search-box">
+                                <i data-lucide="search" class="search-icon"></i>
+                                <input type="text" id="search-input" placeholder="Search MR No, Contractor, Rig, Vessel, ACID...">
+                            </div>
+
+                            <button class="btn btn-primary" id="btn-trigger-search">
+                                <i data-lucide="search"></i>
+                                <span>Search</span>
+                            </button>
+
+                            <button class="btn btn-outline" id="btn-export-current">
+                                <i data-lucide="file-spreadsheet"></i>
+                                <span>Export filtered</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Category Tabs inside Search (مقسم) -->
+                    <div class="category-tabs-container search-tabs-spacer">
+                        <div class="category-tabs" id="search-category-tabs">
+                            <button class="category-tab active" data-status="all">
+                                <i data-lucide="list"></i>
+                                <span>All Shipments</span>
+                            </button>
+                            <button class="category-tab" data-status="In Transit">
+                                <i data-lucide="truck"></i>
+                                <span>In Transit</span>
+                            </button>
+                            <button class="category-tab" data-status="Delivered">
+                                <i data-lucide="check-circle-2"></i>
+                                <span>Delivered</span>
+                            </button>
+                            <button class="category-tab" data-status="Delayed">
+                                <i data-lucide="alert-triangle"></i>
+                                <span>Delayed</span>
+                            </button>
+                            <button class="category-tab" data-status="Pending">
+                                <i data-lucide="clock"></i>
+                                <span>Pending</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Table Wrapper -->
+                    <div class="table-container excel-theme">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>MR No</th>
+                                    <th>PO Number</th>
+                                    <th>PR</th>
+                                    <th>Shipment Ref</th>
+                                    <th>Entity Shipment</th>
+                                    <th>Status Date</th>
+                                    <th>Contractor</th>
+                                    <th>Rig No</th>
+                                    <th>Supplier</th>
+                                    <th>Status</th>
+                                    <th>Incoterm</th>
+                                    <th>Material Description</th>
+                                    <th>Freight Type</th>
+                                    <th>Port of Origin</th>
+                                    <th>Final Destination</th>
+                                    <th>Delivery Place</th>
+                                    <th>Vessel Name</th>
+                                    <th>Shipping Line / Air Line</th>
+                                    <th>B/L - AWB</th>
+                                    <th>ACID #</th>
+                                    <th>Freight Forwarder (Foreign)</th>
+                                    <th>Freight forwarder (Local)</th>
+                                    <th>Container No</th>
+                                    <th>Container Type</th>
+                                    <th>LCL</th>
+                                    <th class="text-right">20" Qty</th>
+                                    <th class="text-right">40" Qty</th>
+                                    <th class="text-right">PKG</th>
+                                    <th class="text-right">Weight (KG)</th>
+                                    <th>ETD</th>
+                                    <th>1st ETA</th>
+                                    <th>2nd ETA</th>
+                                    <th>3rd ETA</th>
+                                    <th>Final ETA</th>
+                                    <th>Sent To Operator Date</th>
+                                    <th>Received From Operator</th>
+                                    <th>Sent to FFW Date</th>
+                                    <th>Releasing Date</th>
+                                    <th>KPI Date</th>
+                                    <th class="text-right">Clearance (Days)</th>
+                                    <th>Custom Dec. Received</th>
+                                    <th>Custom Declaration No.</th>
+                                    <th>Custom Declaration Date</th>
+                                    <th class="text-right">Custom Declaration Value</th>
+                                    <th>Custom Certificate No.</th>
+                                    <th>Customs Receipt No.</th>
+                                    <th>Customs Receipt Date</th>
+                                    <th>Local Invoice No.</th>
+                                    <th class="text-right">Value in (F.C)</th>
+                                    <th>F.C</th>
+                                    <th class="text-right">Local Charges Official (EGP)</th>
+                                    <th class="text-right">Local Charges CCA (EGP)</th>
+                                    <th>Demurrage Invoice #</th>
+                                    <th class="text-right">Demurrage Value ($)</th>
+                                    <th>Foreign Invoice No.</th>
+                                    <th>Receiving Date</th>
+                                    <th class="text-right">Foreign Invoice Value</th>
+                                    <th class="text-right">Local Charges (USD)</th>
+                                    <th class="text-right">Final Shipment Charges (USD)</th>
+                                    <th>Cost /Rig</th>
+                                    <th>PR Rig</th>
+                                    <th>Remarks</th>
+                                    <th>Created By</th>
+                                    <th>Last Modified By</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body">
+                                <!-- JS inserts rows here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination Controls -->
+                    <div class="table-pagination">
+                        <span class="pagination-info" id="pagination-info">Page 1 of 1</span>
+                        <div class="pagination-buttons">
+                            <button class="btn-pagination" id="btn-prev-page" disabled>
+                                <i data-lucide="chevron-left"></i>
+                            </button>
+                            <button class="btn-pagination" id="btn-next-page" disabled>
+                                <i data-lucide="chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Create Shipment Panel -->
+            <section class="dashboard-panel hidden" id="panel-create">
+                <div class="form-card glass-card">
+                    <div class="form-header">
+                        <h3>Register New Shipment</h3>
+                        <p class="form-subtitle">Create a new tracked logistics entry inside the registry with full details</p>
+                    </div>
+                    
+                    <form id="create-shipment-form">
+                        <!-- Wizard Progress Bar -->
+                        <div class="wizard-progress-bar">
+                            <div class="wizard-step active" data-step="1">
+                                <div class="wizard-step-circle">
+                                    <i data-lucide="info"></i>
+                                </div>
+                                <span class="wizard-step-label">General Info</span>
+                            </div>
+                            <div class="wizard-step-connector"></div>
+                            <div class="wizard-step" data-step="2">
+                                <div class="wizard-step-circle">
+                                    <i data-lucide="navigation"></i>
+                                </div>
+                                <span class="wizard-step-label">Shipping &amp; Cargo</span>
+                            </div>
+                            <div class="wizard-step-connector"></div>
+                            <div class="wizard-step" data-step="3">
+                                <div class="wizard-step-circle">
+                                    <i data-lucide="dollar-sign"></i>
+                                </div>
+                                <span class="wizard-step-label">Customs &amp; Financials</span>
+                            </div>
+                        </div>
+
+                        <!-- STEP 1: MR No → Status → Status Date → Supplier → Vessel Name →
+                             Shipping Line → B/L-AWB → ACID# → Freight Type → Port of Origin →
+                             Final Destination → FFW Foreign → Incoterm -->
+                        <div class="wizard-form-pane active" id="wizard-pane-1">
+                            <h4 class="section-title"><i data-lucide="info"></i> Step 1: General Details</h4>
+
+                            <!-- MR No + Status -->
+                            <div class="form-grid-two-column">
+                                <div class="form-group">
+                                    <label for="form-shipment-id">MR No (Shipment ID)</label>
+                                    <input type="text" id="form-shipment-id" placeholder="e.g. 92372 (Required)">
+                                </div>
+                                <div class="form-group">
+                                    <label for="form-status">Status</label>
+                                    <select id="form-status">
+                                        <!-- JS populates -->
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Status Date + Supplier -->
+                            <div class="form-grid-two-column" style="margin-top: 1rem;">
+                                <div class="form-group">
+                                    <label for="form-date">Status Date</label>
+                                    <input type="date" id="form-date">
+                                </div>
+                                <div class="form-group">
+                                    <label for="form-supplier">Supplier</label>
+                                    <select id="form-supplier">
+                                        <option value="">Select Supplier</option>
+                                        <option value="NOV">NOV</option>
+                                        <option value="other">Other / Custom</option>
+                                    </select>
+                                    <input type="text" id="form-supplier-custom" placeholder="Enter custom Supplier" class="custom-input-field">
+                                </div>
+                            </div>
+
+                            <!-- Vessel Name + Shipping Line -->
+                            <div class="form-grid-two-column" style="margin-top: 1rem;">
+                                <div class="form-group">
+                                    <label for="form-vessel-name">Vessel Name</label>
+                                    <input type="text" id="form-vessel-name" placeholder="e.g. MAERSK LOWA">
+                                </div>
+                                <div class="form-group">
+                                    <label for="form-shipping-line">Shipping Line / Air Line</label>
+                                    <input type="text" id="form-shipping-line" placeholder="e.g. Ecu Worldwide USA">
+                                </div>
+                            </div>
+
+                            <!-- B/L-AWB + ACID# -->
+                            <div class="form-grid-two-column" style="margin-top: 1rem;">
+                                <div class="form-group">
+                                    <label for="form-bl-awb">B/L - AWB (F/Z Invoice No.)</label>
+                                    <input type="text" id="form-bl-awb" placeholder="e.g. BANQ1062366299">
+                                </div>
+                                <div class="form-group">
+                                    <label for="form-acid">ACID #</label>
+                                    <input type="text" id="form-acid" placeholder="e.g. 1004696042024100024">
+                                </div>
+                            </div>
+
+                            <!-- Freight Type + Port of Origin + Final Destination -->
+                            <div class="form-grid-three-column" style="margin-top: 1rem;">
+                                <div class="form-group">
+                                    <label for="form-freight-type">Freight Type</label>
+                                    <select id="form-freight-type">
+                                        <option value="">Select Type</option>
+                                        <option value="O/F">Ocean Freight (O/F)</option>
+                                        <option value="A/F">Air Freight (A/F)</option>
+                                        <option value="L/F">Land Freight (L/F)</option>
+                                        <option value="Courier">Courier</option>
+                                        <option value="other">Other / Custom</option>
+                                    </select>
+                                    <input type="text" id="form-freight-type-custom" placeholder="Enter custom type" class="custom-input-field">
+                                </div>
+                                <div class="form-group">
+                                    <label for="form-origin">Port of Origin</label>
+                                    <select id="form-origin">
+                                        <!-- JS populates -->
+                                    </select>
+                                    <input type="text" id="form-origin-custom" placeholder="Enter custom Origin" class="custom-input-field">
+                                </div>
+                                <div class="form-group">
+                                    <label for="form-destination">Final Destination</label>
+                                    <select id="form-destination">
+                                        <!-- JS populates -->
+                                    </select>
+                                    <input type="text" id="form-destination-custom" placeholder="Enter custom Destination" class="custom-input-field">
+                                </div>
+                            </div>
+
+                            <!-- FFW Foreign + Incoterm -->
+                            <div class="form-grid-two-column" style="margin-top: 1rem;">
+                                <div class="form-group">
+                                    <label for="form-ffw-foreign">Freight Forwarder (Foreign)</label>
+                                    <select id="form-ffw-foreign">
+                                        <option value="">Select Foreign Forwarder</option>
+                                        <option value="KN">KN</option>
+                                        <option value="other">Other / Custom</option>
+                                    </select>
+                                    <input type="text" id="form-ffw-foreign-custom" placeholder="Enter custom foreign forwarder" class="custom-input-field">
+                                </div>
+                                <div class="form-group">
+                                    <label for="form-incoterm">Incoterm</label>
+                                    <select id="form-incoterm">
+                                        <option value="">Select Incoterm</option>
+                                        <option value="CFR">CFR</option>
+                                        <option value="FOB">FOB</option>
+                                        <option value="EXW">EXW</option>
+                                        <option value="CIP">CIP</option>
+                                        <option value="DDP">DDP</option>
+                                        <option value="CIF">CIF</option>
+                                        <option value="other">Other / Custom</option>
+                                    </select>
+                                    <input type="text" id="form-incoterm-custom" placeholder="Enter custom Incoterm" class="custom-input-field">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- STEP 2: ETD → ETAs → Container Type → LCL → 20' → 40' → PKG →
+                             Weight → Container No → Shipment Ref → Entity Shipment# →
+                             Oracle PO/PR# → Value FC → Material Desc → Contractor →
+                             Sent To Operator → Received From Operator → Local FFW →
+                             Sent to FFW → Delivery Place → Releasing → KPI → Clearance -->
+                        <div class="wizard-form-pane" id="wizard-pane-2">
+                            <h4 class="section-title"><i data-lucide="navigation"></i> Step 2: Shipping &amp; Cargo Details</h4>
+
+                            <!-- ETD / ETA Dates -->
+                            <div style="background: rgba(124, 58, 237, 0.01); padding: 1rem; border-radius: 8px; border: 1px dashed var(--border-color); margin-bottom: 1rem;">
+                                <h5 style="margin-top: 0; margin-bottom: 0.75rem; font-size: 0.8rem; color: var(--accent-purple); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">ETD / ETA Dates</h5>
+                                <div class="form-grid-four-column">
+                                    <div class="form-group">
+                                        <label for="form-etd">ETD</label>
+                                        <input type="date" id="form-etd">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-eta-1st">1st ETA</label>
+                                        <input type="date" id="form-eta-1st">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-eta-2nd">2nd ETA</label>
+                                        <input type="date" id="form-eta-2nd">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-eta-3rd">3rd ETA</label>
+                                        <input type="date" id="form-eta-3rd">
+                                    </div>
+                                </div>
+                                <div class="form-grid-four-column" style="margin-top: 0.75rem;">
+                                    <div class="form-group">
+                                        <label for="form-eta-final">Final ETA</label>
+                                        <input type="date" id="form-eta-final">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Container & Cargo -->
+                            <div style="background: rgba(37, 99, 235, 0.01); padding: 1rem; border-radius: 8px; border: 1px dashed var(--border-color); margin-bottom: 1rem;">
+                                <h5 style="margin-top: 0; margin-bottom: 0.75rem; font-size: 0.8rem; color: var(--accent-blue); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Container &amp; Cargo</h5>
+                                <div class="form-grid-four-column">
+                                    <div class="form-group">
+                                        <label for="form-container-type">Container Type</label>
+                                        <input type="text" id="form-container-type" placeholder="e.g. DC">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-lcl">LCL</label>
+                                        <select id="form-lcl">
+                                            <option value="">Select</option>
+                                            <option value="1.0">Yes (LCL)</option>
+                                            <option value="0.0">No (FCL)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-c20">20' Container Qty</label>
+                                        <input type="number" id="form-c20" placeholder="e.g. 1" min="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-c40">40' Container Qty</label>
+                                        <input type="number" id="form-c40" placeholder="e.g. 0" min="0">
+                                    </div>
+                                </div>
+                                <div class="form-grid-four-column" style="margin-top: 0.75rem;">
+                                    <div class="form-group">
+                                        <label for="form-pkg">PKG</label>
+                                        <input type="number" id="form-pkg" placeholder="e.g. 2" min="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-weight">Total Weight (B/L) / KG</label>
+                                        <input type="number" id="form-weight" step="0.01" placeholder="e.g. 56.25">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-container-no">Container No</label>
+                                        <input type="text" id="form-container-no" placeholder="e.g. MSKU1234567">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- References & Oracle PO / PR -->
+                            <div style="background: rgba(16, 185, 129, 0.01); padding: 1rem; border-radius: 8px; border: 1px dashed var(--border-color); margin-bottom: 1rem;">
+                                <h5 style="margin-top: 0; margin-bottom: 0.75rem; font-size: 0.8rem; color: var(--accent-emerald); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">References &amp; Oracle PO / PR</h5>
+                                <div class="form-grid-two-column">
+                                    <div class="form-group">
+                                        <label for="form-shipment-ref">Shipment Ref.</label>
+                                        <input type="text" id="form-shipment-ref" placeholder="e.g. 1574992">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-entity-shipment-no">Entity Shipment #</label>
+                                        <input type="text" id="form-entity-shipment-no" placeholder="e.g. ENT-01">
+                                    </div>
+                                </div>
+                                <div class="po-pr-section" style="margin-top: 1rem;">
+                                    <div class="po-pr-header">
+                                        <div class="po-pr-title">
+                                            <i data-lucide="layers"></i>
+                                            Oracle PO Number &amp; PR #
+                                        </div>
+                                        <div class="po-pr-actions">
+                                            <button type="button" id="btn-add-po-pr" class="btn btn-secondary btn-sm">
+                                                <i data-lucide="plus"></i> Add Row
+                                            </button>
+                                            <label for="upload-po-pr-excel" class="btn btn-secondary btn-sm" style="margin: 0; cursor: pointer;">
+                                                <i data-lucide="upload"></i> Upload Excel
+                                            </label>
+                                            <input type="file" id="upload-po-pr-excel" accept=".xlsx, .xls" style="display: none;">
+                                        </div>
+                                    </div>
+                                    <div id="po-pr-rows-container" class="po-pr-rows-container">
+                                        <!-- Dynamic rows go here -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Value in FC + FC Currency -->
+                            <div class="form-grid-two-column" style="margin-top: 1rem;">
+                                <div class="form-group">
+                                    <label for="form-value-fc">Value in (F.C)</label>
+                                    <input type="number" id="form-value-fc" step="0.01" placeholder="Foreign Currency Value">
+                                </div>
+                                <div class="form-group">
+                                    <label for="form-fc">F.C (Currency)</label>
+                                    <input type="text" id="form-fc" placeholder="e.g. USD, EUR">
+                                </div>
+                            </div>
+
+                            <!-- Material Description -->
+                            <div class="form-group-full" style="margin-top: 1rem;">
+                                <label for="form-material-desc">Material Description</label>
+                                <input type="text" id="form-material-desc" placeholder="e.g. Spare Parts from Houston">
+                            </div>
+
+                            <!-- Contractor + Sent To Operator + Received From Operator -->
+                            <div class="form-grid-three-column" style="margin-top: 1rem;">
+                                <div class="form-group">
+                                    <label for="form-contractor">Contractor (Client)</label>
+                                    <select id="form-contractor">
+                                        <!-- JS populates -->
+                                    </select>
+                                    <input type="text" id="form-contractor-custom" placeholder="Enter custom Contractor" class="custom-input-field">
+                                </div>
+                                <div class="form-group">
+                                    <label for="form-sent-to-operator-date">Sent To Operator (Date)</label>
+                                    <input type="date" id="form-sent-to-operator-date">
+                                </div>
+                                <div class="form-group">
+                                    <label for="form-received-from-operator-date">Received From Operator (Date)</label>
+                                    <input type="date" id="form-received-from-operator-date">
+                                </div>
+                            </div>
+
+                            <!-- Local FFW + Sent to FFW + Delivery Place + Releasing -->
+                            <div class="form-grid-four-column" style="margin-top: 1rem;">
+                                <div class="form-group">
+                                    <label for="form-ffw">Freight Forwarder (Local)</label>
+                                    <select id="form-ffw">
+                                        <!-- JS populates -->
+                                    </select>
+                                    <input type="text" id="form-ffw-custom" placeholder="Enter custom carrier" class="custom-input-field">
+                                </div>
+                                <div class="form-group">
+                                    <label for="form-sent-to-ffw-date">Sent to FFW (Date)</label>
+                                    <input type="date" id="form-sent-to-ffw-date">
+                                </div>
+                                <div class="form-group">
+                                    <label for="form-delivery-place">Delivery Place</label>
+                                    <input type="text" id="form-delivery-place" placeholder="e.g. EDC W/H">
+                                </div>
+                                <div class="form-group">
+                                    <label for="form-releasing-date">Releasing (Date)</label>
+                                    <input type="date" id="form-releasing-date">
+                                </div>
+                            </div>
+
+                            <!-- KPI Date + Clearance Period -->
+                            <div class="form-grid-four-column" style="margin-top: 1rem;">
+                                <div class="form-group">
+                                    <label for="form-kpi-date">KPI Date</label>
+                                    <input type="date" id="form-kpi-date">
+                                </div>
+                                <div class="form-group">
+                                    <label for="form-clearance-period">Clearance Period (Days)</label>
+                                    <input type="number" id="form-clearance-period" placeholder="e.g. 5" min="0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- STEP 3: Custom Dec Received Date → Rig No → Custom Dec No →
+                             Custom Dec Date → Custom Dec Value → Custom Certificate No →
+                             Customs Receipt No → Customs Receipt Date → Local Invoice No →
+                             Local Charges Official (EGP) → Local Charges CCA (EGP) →
+                             Demurrage Inv → Demurrage Value → Foreign Invoice No →
+                             Receiving Date → Foreign Invoice Value → Local Charges (USD) →
+                             Final Shipment Charges (USD) → Cost/Rig → PR Rig → Remarks -->
+                        <div class="wizard-form-pane" id="wizard-pane-3">
+                            <h4 class="section-title"><i data-lucide="dollar-sign"></i> Step 3: Customs &amp; Financials</h4>
+
+                            <!-- Customs Declarations -->
+                            <div style="background: rgba(37, 99, 235, 0.01); padding: 1rem; border-radius: 8px; border: 1px dashed var(--border-color); margin-bottom: 1rem;">
+                                <h5 style="margin-top: 0; margin-bottom: 0.75rem; font-size: 0.8rem; color: var(--accent-blue); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Customs Declaration</h5>
+
+                                <!-- Original Custom Declaration Received Date + Rig No -->
+                                <div class="form-grid-two-column">
+                                    <div class="form-group">
+                                        <label for="form-custom-declaration-received">Original Custom Declaration Received Date</label>
+                                        <input type="date" id="form-custom-declaration-received">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-rig">Rig No</label>
+                                        <select id="form-rig">
+                                            <!-- JS populates -->
+                                        </select>
+                                        <input type="text" id="form-rig-custom" placeholder="Enter custom Rig" class="custom-input-field">
+                                    </div>
+                                </div>
+
+                                <!-- Custom Dec No + Date + Value + Certificate No -->
+                                <div class="form-grid-four-column" style="margin-top: 0.75rem;">
+                                    <div class="form-group">
+                                        <label for="form-custom-declaration-no">Custom Declaration No.</label>
+                                        <input type="text" id="form-custom-declaration-no" placeholder="e.g. 7573/2024">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-custom-declaration-date">Custom Declaration Date</label>
+                                        <input type="date" id="form-custom-declaration-date">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-custom-declaration-value">Custom Declaration Value</label>
+                                        <input type="number" id="form-custom-declaration-value" step="0.01" placeholder="e.g. 499.58">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-custom-certificate-no">Custom Certificate No.</label>
+                                        <input type="text" id="form-custom-certificate-no" placeholder="e.g. 9725">
+                                    </div>
+                                </div>
+
+                                <!-- Customs Receipt No + Date + Local Invoice No -->
+                                <div class="form-grid-four-column" style="margin-top: 0.75rem;">
+                                    <div class="form-group">
+                                        <label for="form-customs-receipt-no">Customs Receipt No.</label>
+                                        <input type="text" id="form-customs-receipt-no" placeholder="e.g. 6169//6168">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-customs-receipt-date">Customs Receipt Date</label>
+                                        <input type="date" id="form-customs-receipt-date">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-local-invoice-no">Local Invoice No.</label>
+                                        <input type="text" id="form-local-invoice-no" placeholder="e.g. 252036//252037">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Financial Details & Costs -->
+                            <div style="background: rgba(16, 185, 129, 0.01); padding: 1rem; border-radius: 8px; border: 1px dashed var(--border-color); margin-bottom: 1rem;">
+                                <h5 style="margin-top: 0; margin-bottom: 0.75rem; font-size: 0.8rem; color: var(--accent-emerald); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Financial Details &amp; Costs</h5>
+
+                                <!-- Total Local Charges EGP - Official + CCA -->
+                                <div class="form-grid-two-column">
+                                    <div class="form-group">
+                                        <label for="form-local-charges-immediate">Total Local Charges (EGP) - Official Receipt</label>
+                                        <input type="number" id="form-local-charges-immediate" step="0.01" placeholder="Official receipt EGP">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-local-charges-cca">Total Local Charges (EGP) - CCA Service</label>
+                                        <input type="number" id="form-local-charges-cca" step="0.01" placeholder="CCA Service EGP">
+                                    </div>
+                                </div>
+
+                                <!-- Demurrage Inv + Value + Foreign Invoice No + Receiving Date -->
+                                <div class="form-grid-four-column" style="margin-top: 0.75rem;">
+                                    <div class="form-group">
+                                        <label for="form-demurrage-inv">Demurrage, Storage &amp; Discharge Fees Invoice</label>
+                                        <input type="text" id="form-demurrage-inv" placeholder="Demurrage Inv #">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-demurrage-val">Demurrage Value ($)</label>
+                                        <input type="number" id="form-demurrage-val" step="0.01" placeholder="Demurrage fees">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-foreign-invoice-no">Foreign Invoice No.</label>
+                                        <input type="text" id="form-foreign-invoice-no" placeholder="Foreign Inv #">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-receiving-date">Receiving Date</label>
+                                        <input type="date" id="form-receiving-date">
+                                    </div>
+                                </div>
+
+                                <!-- Foreign Invoice Value + Local Charges USD + Final Shipment Charges USD + Cost/Rig -->
+                                <div class="form-grid-four-column" style="margin-top: 0.75rem;">
+                                    <div class="form-group">
+                                        <label for="form-foreign-invoice-value">Foreign Invoice Value</label>
+                                        <input type="number" id="form-foreign-invoice-value" step="0.01" placeholder="Inv value">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-local-charges-usd">Local Charges (USD)</label>
+                                        <input type="number" id="form-local-charges-usd" step="0.01" placeholder="Local charges in USD">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-final-shipment-charges-usd">Final Shipment Charges (USD)</label>
+                                        <input type="number" id="form-final-shipment-charges-usd" step="0.01" placeholder="Final charges">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="form-cost-rig">Cost /Rig</label>
+                                        <input type="text" id="form-cost-rig" placeholder="Cost per rig">
+                                    </div>
+                                </div>
+
+                                <!-- PR Rig -->
+                                <div class="form-grid-two-column" style="margin-top: 0.75rem;">
+                                    <div class="form-group">
+                                        <label for="form-pr-rig">PR Rig</label>
+                                        <input type="text" id="form-pr-rig" placeholder="PR Rig">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Remarks -->
+                            <div class="form-group-full">
+                                <label for="form-remarks">Remarks</label>
+                                <input type="text" id="form-remarks" placeholder="General observations or notes">
+                            </div>
+                        </div>
+
+                        <!-- Wizard Footer Actions -->
+                        <div class="wizard-actions">
+                            <button type="button" class="btn btn-secondary hidden" id="btn-wizard-prev">
+                                <i data-lucide="chevron-left"></i>
+                                <span>Previous</span>
+                            </button>
+                            <div style="flex-grow: 1;"></div>
+                            <button type="button" class="btn btn-primary" id="btn-wizard-next">
+                                <span>Next</span>
+                                <i data-lucide="chevron-right"></i>
+                            </button>
+                            <button type="button" class="btn btn-success hidden" id="btn-wizard-submit">
+                                <i data-lucide="check"></i>
+                                <span>Submit Shipment</span>
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Alert Notifications container -->
+    <div id="notification-container" class="notification-container"></div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script src="data.js"></script>
+    <script src="app.js?v=2"></script>
+    <!-- Login Modal -->
+    <div id="modal-login" class="modal-overlay hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; justify-content: center; align-items: center;">
+        <div class="modal-content glass-card" style="background: var(--bg-card); padding: 2rem; border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 700;">User Login</h2>
+                <button class="btn-icon" id="btn-close-login" style="background: transparent; border: none; cursor: pointer; color: var(--text-secondary);"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-login">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Email Address</label>
+                        <input type="email" id="login-email" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px;" placeholder="user@egyptian-drilling.com" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Password</label>
+                        <input type="password" id="login-password" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px;" placeholder="•••••" required>
+                    </div>
+                    <div id="login-error" class="hidden" style="color: #e11d48; margin-bottom: 1rem; font-size: 0.875rem;">Invalid email or password.</div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.75rem; background: var(--accent-blue); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Login</button>
+                </form>
+                <div id="logged-in-state" class="hidden" style="text-align: center;">
+                    <p style="margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">You are currently logged in as:</p>
+                    <div id="current-user-display" style="font-weight: 700; font-size: 1.125rem; color: var(--accent-purple); margin-bottom: 0.25rem;"></div>
+                    <div id="current-user-role" style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1.5rem;"></div>
+                    <button type="button" class="btn" id="btn-logout" style="width: 100%; justify-content: center; padding: 0.75rem; background: transparent; border: 1px solid #e11d48; color: #e11d48; border-radius: 8px; font-weight: 600; cursor: pointer;">Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
 </html>
