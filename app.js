@@ -2100,6 +2100,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 1500);
 });
+
 // ----------------------------------------------------
 // Bulk Excel Import
 // ----------------------------------------------------
@@ -2138,11 +2139,11 @@ function handleBulkExcelImport(e) {
             };
 
             json.forEach((row, index) => {
-                const mrNo = mapColumn(row, ["mr no.", "mr no", "mr number"]);
+                const mrNo = mapColumn(row, ["mr no.", "mr no", "mr number", "mr#", "m.r"], ["mr", "shipment id", "m.r"]);
                 if(!mrNo) return;
 
                 const poNo = mapColumn(row, ["oracle po number", "oracle po", "po number", "po no"]);
-                const id = poNo ? `${mrNo}_${poNo}` : `${mrNo}_manual_${Date.now()}_${index}`;
+                const id = poNo ? `${mrNo}_${poNo}` : `${mrNo}_manual_` + Date.now() + "_" + index;
 
                 const newItem = {
                     id: id,
@@ -2229,8 +2230,14 @@ function handleBulkExcelImport(e) {
                     window.saveShipment(newItem);
                 }
             });
+            
+            if (importedCount === 0 && updatedCount === 0 && json.length > 0) {
+                const sampleKeys = Object.keys(json[0]).join(" | ");
+                alert("لم يتم إضافة أي بيانات!\nالنظام مش قادر يتعرف على عمود رقم الشحنة (MR No).\nالأعمدة اللي لقاها في الملف هي:\n" + sampleKeys);
+            } else {
+                alert(`✅ Excel Import Complete!\n\nImported New: ` + importedCount + `\nUpdated Existing: ` + updatedCount);
+            }
 
-            alert(`âœ… Excel Import Complete!\n\nImported New: ${importedCount}\nUpdated Existing: ${updatedCount}`);
             if (typeof renderShipmentsTable === 'function') renderShipmentsTable();
             if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
             
