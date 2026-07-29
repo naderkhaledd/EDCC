@@ -1,4 +1,4 @@
-// Auth State
+﻿// Auth State
 const ALLOWED_USERS = [
     { email: "ahmed.awad@egyptian-drilling.com", name: "Ahmed Awad" },
     { email: "ahmed.ibrahim@egyptian-drilling.com", name: "Ahmed Ibrahim", role: "Logistics Section Head" },
@@ -542,10 +542,7 @@ function sortShipmentsData() {
     });
 }
 
-function saveToLocalStorage() {
-    sortShipmentsData();
-    localStorage.setItem("edc_shipments_data", JSON.stringify(shipmentsData));
-}
+
 
 function saveShipment(item) {
     if (window.db) {
@@ -1295,7 +1292,7 @@ function handleExcelFile(file) {
                 normalized.shipmentRef = findValueByKeywords(row, ["shipment ref", "reference"]) || "";
                 normalized.entityShipmentNo = findValueByKeywords(row, ["entity"]) || "";
                 
-                let rDate = findValueByKeywords(row, ["date", "تاريخ"]);
+                let rDate = findValueByKeywords(row, ["date", "طھط§ط±ظٹط®"]);
                 if (typeof rDate === "number") {
                     const dateObj = XLSX.SSF.parse_date_code(rDate);
                     normalized.date = `${dateObj.y}-${String(dateObj.m).padStart(2, '0')}-${String(dateObj.d).padStart(2, '0')}`;
@@ -1303,12 +1300,12 @@ function handleExcelFile(file) {
                     normalized.date = rDate || "";
                 }
                 
-                normalized.contractor = findValueByKeywords(row, ["contractor", "مقاول"]) || "";
-                normalized.rig = findValueByKeywords(row, ["rig", "بريمة"]) || "";
-                normalized.supplier = findValueByKeywords(row, ["supplier", "مورد", "vendor"]) || "";
-                normalized.status = findValueByKeywords(row, ["status", "حالة", "الحالة"]) || "Pending";
+                normalized.contractor = findValueByKeywords(row, ["contractor", "ظ…ظ‚ط§ظˆظ„"]) || "";
+                normalized.rig = findValueByKeywords(row, ["rig", "ط¨ط±ظٹظ…ط©"]) || "";
+                normalized.supplier = findValueByKeywords(row, ["supplier", "ظ…ظˆط±ط¯", "vendor"]) || "";
+                normalized.status = findValueByKeywords(row, ["status", "ط­ط§ظ„ط©", "ط§ظ„ط­ط§ظ„ط©"]) || "Pending";
                 normalized.incoterm = findValueByKeywords(row, ["incoterm"]) || "";
-                normalized.materialDesc = findValueByKeywords(row, ["material", "desc", "وصف"]) || "";
+                normalized.materialDesc = findValueByKeywords(row, ["material", "desc", "ظˆطµظپ"]) || "";
                 normalized.freightType = findValueByKeywords(row, ["freight type", "freight"]) || "";
                 normalized.origin = findValueByKeywords(row, ["origin", "port of origin"]) || "";
                 normalized.destination = findValueByKeywords(row, ["destination", "final destination"]) || "";
@@ -1346,7 +1343,7 @@ function handleExcelFile(file) {
                 normalized.finalShipmentChargesUsd = findValueByKeywords(row, ["final shipment", "final"]) || "";
                 normalized.costRig = findValueByKeywords(row, ["cost /rig", "cost rig"]) || "";
                 normalized.prRig = findValueByKeywords(row, ["pr rig"]) || "";
-                normalized.remarks = findValueByKeywords(row, ["remarks", "note", "ملاحظات", "ملاحظة"]) || "";
+                normalized.remarks = findValueByKeywords(row, ["remarks", "note", "ظ…ظ„ط§ط­ط¸ط§طھ", "ظ…ظ„ط§ط­ط¸ط©"]) || "";
                 
                 return normalized;
             });
@@ -1529,7 +1526,7 @@ function getShipmentChanges(oldItem, newItem) {
             if (valNew.includes('T')) valNew = valNew.split('T')[0];
         }
         if (valOld !== valNew) {
-            changes.push(`${fieldsToTrack[key]}: "${valOld || '-'}" ➔ "${valNew || '-'}"`);
+            changes.push(`${fieldsToTrack[key]}: "${valOld || '-'}" â‍” "${valNew || '-'}"`);
         }
     }
     return changes.length > 0 ? changes.join(', ') : "No changes detected (save clicked)";
@@ -2100,6 +2097,155 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 1500);
 });
+// ----------------------------------------------------
+// Bulk Excel Import
+// ----------------------------------------------------
+function handleBulkExcelImport(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        try {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheet = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheet];
+            const json = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
+            
+            if(json.length === 0) {
+                alert("The Excel file is empty!");
+                return;
+            }
+
+            let importedCount = 0;
+            let updatedCount = 0;
+            
+            const mapColumn = (row, exactMatches, partialMatches = []) => {
+                const keys = Object.keys(row);
+                for(let k of keys) {
+                    const cleanK = k.toLowerCase().replace(/\s+/g, ' ').trim();
+                    if(exactMatches.some(m => cleanK === m.toLowerCase())) return String(row[k] || "").trim();
+                }
+                for(let k of keys) {
+                    const cleanK = k.toLowerCase().replace(/\s+/g, ' ').trim();
+                    if(partialMatches.some(m => cleanK.includes(m.toLowerCase()))) return String(row[k] || "").trim();
+                }
+                return "";
+            };
+
+            json.forEach((row, index) => {
+                const mrNo = mapColumn(row, ["mr no.", "mr no", "mr number"]);
+                if(!mrNo) return;
+
+                const poNo = mapColumn(row, ["oracle po number", "oracle po", "po number", "po no"]);
+                const id = poNo ? `${mrNo}_${poNo}` : `${mrNo}_manual_${Date.now()}_${index}`;
+
+                const newItem = {
+                    id: id,
+                    mrNo: mrNo,
+                    poNo: poNo,
+                    prNo: mapColumn(row, ["pr #", "pr no"]),
+                    status: mapColumn(row, ["status"]),
+                    date: mapColumn(row, ["status date"]),
+                    supplier: mapColumn(row, ["supplier"]),
+                    vesselName: mapColumn(row, ["vessel name", "vessel"]),
+                    shippingLine: mapColumn(row, ["shipping line // air line", "shipping line", "air line"]),
+                    blAwb: mapColumn(row, ["b/l - awb(f/z invoice no.)", "b/l", "awb"]),
+                    acid: mapColumn(row, ["acid #", "acid"]),
+                    freightType: mapColumn(row, ["freight type"]),
+                    origin: mapColumn(row, ["port of origin", "origin"]),
+                    destination: mapColumn(row, ["final destination", "destination"]),
+                    ffwForeign: mapColumn(row, ["freight forwarder (forigen)", "freight forwarder foreign"]),
+                    etd: mapColumn(row, ["etd"]),
+                    eta1: mapColumn(row, ["1st eta"]),
+                    eta2: mapColumn(row, ["2nd eta"]),
+                    ata: mapColumn(row, ["3rd eta"]),
+                    etaFinal: mapColumn(row, ["final eta"]),
+                    containerType: mapColumn(row, ["container type"]),
+                    lcl: mapColumn(row, ["lcl"]),
+                    qty20: mapColumn(row, ["20'", "20"]),
+                    qty40: mapColumn(row, ["40'", "40"]),
+                    pkg: mapColumn(row, ["pkg"]),
+                    weightKg: mapColumn(row, ["total weight (b/l) / kg", "total weight", "weight"]),
+                    containerNo: mapColumn(row, ["container no"]),
+                    shipmentRef: mapColumn(row, ["shipment ref.", "shipment ref"]),
+                    entityShipmentNo: mapColumn(row, ["entity shipment #", "entity shipment"]),
+                    valueFc: mapColumn(row, ["value in (f.c)"]),
+                    fc: mapColumn(row, ["f.c", "fc"]),
+                    materialDesc: mapColumn(row, ["material description", "material"]),
+                    contractor: mapColumn(row, ["contractor"]),
+                    sentToOperatorDate: mapColumn(row, ["sent to operator (date)", "sent to operator"]),
+                    receivedFromOperatorDate: mapColumn(row, ["received from operator (date)", "received from operator"]),
+                    ffw: mapColumn(row, ["freight forwarder", "ffw"], ["freight forwarder"]),
+                    sentToFfwDate: mapColumn(row, ["sent to ffw (date)", "sent to ffw"]),
+                    deliveryPlace: mapColumn(row, ["delivery place"]),
+                    releasingDate: mapColumn(row, ["releasing (date)", "releasing"]),
+                    kpiDate: mapColumn(row, ["kpi date"]),
+                    clearanceDate: mapColumn(row, ["clearance period(days)", "clearance period"]),
+                    customDeclarationReceivedDate: mapColumn(row, ["original custom declaration received date", "custom declaration received"]),
+                    rig: mapColumn(row, ["rig no.", "rig no", "rig"]),
+                    customDeclarationNo: mapColumn(row, ["custom declaration no.", "custom declaration no"]),
+                    customDeclarationDate: mapColumn(row, ["custom declaration date"]),
+                    customDeclarationValue: mapColumn(row, ["custom declaration value"]),
+                    customCertificateNo: mapColumn(row, ["custom certeficate no.", "custom certificate no.", "custom certificate"]),
+                    customsReceiptNo: mapColumn(row, ["customs reciept no.", "customs receipt no.", "customs receipt no"]),
+                    customsReceiptDate: mapColumn(row, ["customs reciept date", "customs receipt date"]),
+                    localInvoiceNo: mapColumn(row, ["local invoice no.", "local invoice no"]),
+                    localChargesImmediate: mapColumn(row, ["total local charges (egp) - immediate payment - official receipt", "immediate payment"]),
+                    localChargesCca: mapColumn(row, ["total local charges (egp) - cca service", "cca service"]),
+                    demurrageInvoice: mapColumn(row, ["demurrage , storage & discharge fees invoice", "demurrage invoice"]),
+                    demurrageValue: "",
+                    foreignInvoiceNo: mapColumn(row, ["forigen invoice no.", "foreign invoice no.", "foreign invoice no"]),
+                    receivingDate: mapColumn(row, ["receiving date"]),
+                    foreignInvoiceValue: "",
+                    localChargesUsd: mapColumn(row, ["local charges (usd)", "local charges usd"]),
+                    finalShipmentChargesUsd: mapColumn(row, ["final shipment charges"]),
+                    remarks: mapColumn(row, ["remarks"]),
+                    createdBy: typeof loggedInUser !== "undefined" && loggedInUser ? loggedInUser.name : "Excel Import",
+                    lastModifiedBy: typeof loggedInUser !== "undefined" && loggedInUser ? loggedInUser.name : "Excel Import"
+                };
+
+                const keys = Object.keys(row);
+                let valueCols = keys.filter(k => k.toLowerCase().trim().startsWith("value") && k.length <= 8);
+                if (valueCols.length > 0) newItem.demurrageValue = String(row[valueCols[0]] || "");
+                if (valueCols.length > 1) newItem.foreignInvoiceValue = String(row[valueCols[1]] || "");
+
+                const existingIdx = typeof shipmentsData !== "undefined" ? shipmentsData.findIndex(s => s.mrNo === mrNo && (s.poNo === poNo || !poNo)) : -1;
+                if(existingIdx !== -1) {
+                    newItem.id = shipmentsData[existingIdx].id;
+                    newItem.createdBy = shipmentsData[existingIdx].createdBy || newItem.createdBy;
+                    shipmentsData[existingIdx] = Object.assign({}, shipmentsData[existingIdx], newItem);
+                    updatedCount++;
+                } else {
+                    if (typeof shipmentsData !== "undefined") shipmentsData.push(newItem);
+                    importedCount++;
+                }
+
+                if(window.saveShipment) {
+                    window.saveShipment(newItem);
+                }
+            });
+
+            alert(`أ¢إ“â€¦ Excel Import Complete!\n\nImported New: ${importedCount}\nUpdated Existing: ${updatedCount}`);
+            if (typeof renderShipmentsTable === 'function') renderShipmentsTable();
+            if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
+            
+        } catch(err) {
+            console.error("Bulk Import Error:", err);
+            alert("Error parsing Excel: " + err.message);
+        }
+        e.target.value = ""; 
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const bulkImportExcel = document.getElementById("bulk-import-excel");
+    if (bulkImportExcel) {
+        bulkImportExcel.addEventListener("change", handleBulkExcelImport);
+    }
+});
 
 // ----------------------------------------------------
 // Bulk Excel Import
@@ -2233,9 +2379,9 @@ function handleBulkExcelImport(e) {
             
             if (importedCount === 0 && updatedCount === 0 && json.length > 0) {
                 const sampleKeys = Object.keys(json[0]).join(" | ");
-                alert("لم يتم إضافة أي بيانات!\nالنظام مش قادر يتعرف على عمود رقم الشحنة (MR No).\nالأعمدة اللي لقاها في الملف هي:\n" + sampleKeys);
+                alert("ظ„ظ… ظٹطھظ… ط¥ط¶ط§ظپط© ط£ظٹ ط¨ظٹط§ظ†ط§طھ!\nط§ظ„ظ†ط¸ط§ظ… ظ…ط´ ظ‚ط§ط¯ط± ظٹطھط¹ط±ظپ ط¹ظ„ظ‰ ط¹ظ…ظˆط¯ ط±ظ‚ظ… ط§ظ„ط´ط­ظ†ط© (MR No).\nط§ظ„ط£ط¹ظ…ط¯ط© ط§ظ„ظ„ظٹ ظ„ظ‚ط§ظ‡ط§ ظپظٹ ط§ظ„ظ…ظ„ظپ ظ‡ظٹ:\n" + sampleKeys);
             } else {
-                alert(`✅ Excel Import Complete!\n\nImported New: ` + importedCount + `\nUpdated Existing: ` + updatedCount);
+                alert(`âœ… Excel Import Complete!\n\nImported New: ` + importedCount + `\nUpdated Existing: ` + updatedCount);
             }
 
             if (typeof renderShipmentsTable === 'function') renderShipmentsTable();
@@ -2256,3 +2402,5 @@ document.addEventListener("DOMContentLoaded", () => {
         bulkImportExcel.addEventListener("change", handleBulkExcelImport);
     }
 });
+
+
