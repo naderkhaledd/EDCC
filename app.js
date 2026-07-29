@@ -45,8 +45,33 @@ document.addEventListener("DOMContentLoaded", () => {
                     return item;
                 });
                 sortShipmentsData();
-                if (typeof filterAndSearchData === 'function') filterAndSearchData();
-                if (typeof initDashboard === 'function') initDashboard();
+    filteredData = [...shipmentsData];
+    
+    // Auth Init
+    const savedUser = localStorage.getItem("edc_logged_in_user");
+    if (savedUser) {
+        try { 
+            const parsed = JSON.parse(savedUser);
+            if (parsed && parsed.email) {
+                const freshUser = ALLOWED_USERS.find(u => u.email.toLowerCase() === parsed.email.toLowerCase());
+                if (freshUser) {
+                    loggedInUser = freshUser;
+                    localStorage.setItem("edc_logged_in_user", JSON.stringify(freshUser));
+                } else {
+                    loggedInUser = parsed;
+                }
+            }
+        } catch(e){}
+    }
+    
+    // Initialize views & event listeners
+    initDashboard();
+    setupEventListeners();
+    populateFormDropdowns();
+    updateAuthUI();
+      const ol = document.getElementById("loading-overlay");
+      if (ol) ol.style.display = "none";
+                onDataLoaded();
             } else {
                 // If Firebase is empty, fallback to seed logic
                 loadFromLocalStorageFallback();
@@ -164,31 +189,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         sortShipmentsData();
+        onDataLoaded();
     }
-    filteredData = [...shipmentsData];
-    
-    // Auth Init
-    const savedUser = localStorage.getItem("edc_logged_in_user");
-    if (savedUser) {
-        try { 
-            const parsed = JSON.parse(savedUser);
-            if (parsed && parsed.email) {
-                const freshUser = ALLOWED_USERS.find(u => u.email.toLowerCase() === parsed.email.toLowerCase());
-                if (freshUser) {
-                    loggedInUser = freshUser;
-                    localStorage.setItem("edc_logged_in_user", JSON.stringify(freshUser));
-                } else {
-                    loggedInUser = parsed;
-                }
-            }
-        } catch(e){}
-    }
-    
-    // Initialize views & event listeners
-    initDashboard();
-    setupEventListeners();
-    populateFormDropdowns();
-    updateAuthUI();
 });
 
 function initDashboard() {
@@ -2446,3 +2448,12 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
+
+function onDataLoaded() {
+    filteredData = [...shipmentsData];
+    initDashboard();
+    if (typeof renderShipmentsTable === 'function') renderShipmentsTable();
+    if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
+    const ol = document.getElementById("loading-overlay");
+    if (ol) ol.style.display = "none";
+}
