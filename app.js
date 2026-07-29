@@ -1,4 +1,4 @@
-﻿// Auth State
+// Auth State
 const ALLOWED_USERS = [
     { email: "ahmed.awad@egyptian-drilling.com", name: "Ahmed Awad" },
     { email: "ahmed.ibrahim@egyptian-drilling.com", name: "Ahmed Ibrahim", role: "Logistics Section Head" },
@@ -1919,70 +1919,29 @@ function renderManagerLogs(filterText = "") {
 // Dynamic PO & PR Row Management
 // ----------------------------------------------------
 
-// Store PO items: Map<rowId, {poNo, items: [{desc, qty, unit, ...}]}>
-if (!window.poItemsStore) window.poItemsStore = new Map();
-let poRowCounter = 0;
-
-function addPoPrRow(poValue = "", prValue = "", storedItems = null) {
+function addPoPrRow(poValue = "", prValue = "") {
     const container = document.getElementById("po-pr-rows-container");
     if (!container) return;
 
-    const rowId = "po-row-" + (++poRowCounter);
-    const fileInputId = "po-items-file-" + poRowCounter;
-    const hasItems = storedItems && storedItems.length > 0;
-
     const row = document.createElement("div");
     row.className = "po-pr-row";
-    row.setAttribute("data-row-id", rowId);
     row.innerHTML = `
-        <div class="form-group" style="position:relative;">
-            <input type="text" class="po-input" placeholder="Oracle PO Number (e.g. P24E39644)" value="${poValue}">
+        <div class="form-group">
+            <input type="text" class="po-input" placeholder="PO Number (e.g. P24E39644)" value="${poValue}">
         </div>
         <div class="form-group">
-            <input type="text" class="pr-input" placeholder="PR # (e.g. E33240554)" value="${prValue}">
+            <input type="text" class="pr-input" placeholder="PR (e.g. E33240554)" value="${prValue}">
         </div>
-        <div class="po-row-actions">
-            <label for="${fileInputId}" class="btn-po-upload" title="Upload Excel items for this PO">
-                <i data-lucide="file-spreadsheet"></i>
-            </label>
-            <input type="file" id="${fileInputId}" accept=".xlsx,.xls" style="display:none;" class="po-items-file-input">
-            <button type="button" class="btn-po-items ${hasItems ? '' : 'hidden'}" title="View PO Items" data-row-id="${rowId}">
-                <i data-lucide="package"></i>
-                <span class="po-items-count">${hasItems ? storedItems.length : 0}</span>
-            </button>
-            <button type="button" class="btn-remove-row" title="Remove Row">
-                <i data-lucide="trash-2"></i>
-            </button>
-        </div>
+        <button type="button" class="btn-remove-row" title="Remove Row">
+            <i data-lucide="trash-2"></i>
+        </button>
     `;
 
-    if (storedItems && storedItems.length > 0) {
-        window.poItemsStore.set(rowId, { poNo: poValue, items: storedItems });
-    }
-
-    // Upload Excel per PO
-    const fileInput = row.querySelector(".po-items-file-input");
-    fileInput.addEventListener("change", (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const poInput = row.querySelector(".po-input");
-        const poNo = poInput.value.trim() || "(unknown PO)";
-        parsePOItemsExcel(file, rowId, poNo, row);
-        e.target.value = "";
-    });
-
-    // View items modal
-    const viewBtn = row.querySelector(".btn-po-items");
-    viewBtn.addEventListener("click", () => {
-        const stored = window.poItemsStore.get(rowId);
-        if (stored) openPOItemsModal(stored.poNo, stored.items);
-    });
-
-    // Remove row
+    // Add remove event listener
     const removeBtn = row.querySelector(".btn-remove-row");
     removeBtn.addEventListener("click", () => {
-        window.poItemsStore.delete(rowId);
         row.remove();
+        // Always keep at least one empty row
         if (container.children.length === 0) {
             addPoPrRow("", "");
         }
@@ -1990,122 +1949,6 @@ function addPoPrRow(poValue = "", prValue = "", storedItems = null) {
 
     container.appendChild(row);
     lucide.createIcons();
-}
-
-function parsePOItemsExcel(file, rowId, poNo, rowEl) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheet];
-            const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
-            if (json.length === 0) {
-                alert("No data found in the Excel file.");
-                return;
-            }
-
-            // Store all rows as items (keep all columns)
-            const items = json.map(row => {
-                const item = {};
-                Object.entries(row).forEach(([k, v]) => {
-                    if (String(v).trim() !== "") item[k] = v;
-                });
-                return item;
-            }).filter(r => Object.keys(r).length > 0);
-
-            window.poItemsStore.set(rowId, { poNo, items });
-
-            // Update badge
-            const badge = rowEl.querySelector(".btn-po-items");
-            const countSpan = rowEl.querySelector(".po-items-count");
-            if (badge && countSpan) {
-                countSpan.textContent = items.length;
-                badge.classList.remove("hidden");
-            }
-
-            alert(`✅ Loaded ${items.length} items for PO ${poNo}`);
-            lucide.createIcons();
-        } catch (err) {
-            console.error("PO Items Excel error:", err);
-            alert("Failed to read Excel: " + err.message);
-        }
-    };
-    reader.readAsArrayBuffer(file);
-}
-
-function openPOItemsModal(poNo, items) {
-    // Remove existing modal
-    const existing = document.getElementById("modal-po-items");
-    if (existing) existing.remove();
-
-    if (!items || items.length === 0) {
-        alert("No items loaded for this PO.");
-        return;
-    }
-
-    // Get all column keys
-    const allKeys = [];
-    items.forEach(item => {
-        Object.keys(item).forEach(k => {
-            if (!allKeys.includes(k)) allKeys.push(k);
-        });
-    });
-
-    const headerCells = allKeys.map(k => `<th>${k}</th>`).join("");
-    const bodyRows = items.map((item, idx) => {
-        const cells = allKeys.map(k => `<td>${item[k] !== undefined ? item[k] : ""}</td>`).join("");
-        return `<tr><td style="font-weight:600;color:var(--accent-purple);">${idx + 1}</td>${cells}</tr>`;
-    }).join("");
-
-    const modal = document.createElement("div");
-    modal.id = "modal-po-items";
-    modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;";
-    modal.innerHTML = `
-        <div style="background:var(--bg-card);border-radius:16px;box-shadow:0 25px 50px rgba(0,0,0,0.4);width:100%;max-width:90vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:1px solid var(--border-color);flex-shrink:0;">
-                <div style="display:flex;align-items:center;gap:0.75rem;">
-                    <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent-emerald),#059669);display:flex;align-items:center;justify-content:center;">
-                        <i data-lucide="package" style="width:18px;height:18px;color:white;"></i>
-                    </div>
-                    <div>
-                        <h3 style="margin:0;font-size:1rem;font-weight:700;">PO Items</h3>
-                        <p style="margin:0;font-size:0.8rem;color:var(--text-secondary);">Oracle PO: <strong style="color:var(--accent-emerald);">${poNo}</strong> &mdash; ${items.length} items</p>
-                    </div>
-                </div>
-                <button id="btn-close-po-items" style="background:transparent;border:none;cursor:pointer;color:var(--text-secondary);padding:0.5rem;border-radius:8px;display:flex;align-items:center;">
-                    <i data-lucide="x" style="width:20px;height:20px;"></i>
-                </button>
-            </div>
-            <div style="overflow:auto;padding:1rem 1.5rem;flex:1;">
-                <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
-                    <thead>
-                        <tr style="position:sticky;top:0;background:var(--bg-secondary);">
-                            <th style="padding:0.6rem 0.75rem;text-align:left;font-weight:700;color:var(--text-secondary);border-bottom:2px solid var(--border-color);white-space:nowrap;">#</th>
-                            ${headerCells.replace(/<th>/g, '<th style="padding:0.6rem 0.75rem;text-align:left;font-weight:700;color:var(--text-secondary);border-bottom:2px solid var(--border-color);white-space:nowrap;">')}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${bodyRows.replace(/<tr>/g, '<tr style="border-bottom:1px solid var(--border-color);">').replace(/<td>/g, '<td style="padding:0.55rem 0.75rem;vertical-align:top;">')}
-                    </tbody>
-                </table>
-            </div>
-            <div style="padding:1rem 1.5rem;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;flex-shrink:0;">
-                <button id="btn-close-po-items-2" class="btn btn-secondary">Close</button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-    lucide.createIcons();
-
-    // Close handlers
-    const closeModal = () => modal.remove();
-    document.getElementById("btn-close-po-items").addEventListener("click", closeModal);
-    document.getElementById("btn-close-po-items-2").addEventListener("click", closeModal);
-    modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
 }
 
 function clearPoPrRows() {
