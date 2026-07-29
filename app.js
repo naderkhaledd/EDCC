@@ -161,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         if (needsInitialSeed) {
             try {
-                const response = await fetch('data.json');
+                const response = await fetch("data.json?v=" + Date.now());
                 if (response.ok) {
                     const initialShipments = await response.json();
                     if (initialShipments && initialShipments.length > 0) {
