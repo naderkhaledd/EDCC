@@ -59,7 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
         loadFromLocalStorageFallback();
     }
 
-    function loadFromLocalStorageFallback() {
+    async function loadFromLocalStorageFallback() {
         const savedData = localStorage.getItem("edc_shipments_data");
         let needsInitialSeed = false;
         if (savedData) {
@@ -134,22 +134,32 @@ document.addEventListener("DOMContentLoaded", () => {
             needsInitialSeed = true;
         }
         
-        if (needsInitialSeed && typeof initialShipments !== 'undefined' && initialShipments.length > 0) {
-            shipmentsData = initialShipments.map((item, index) => {
-                const mrVal = String(item.id || '').trim();
-                const poVal = String(item.poNo || '').trim();
-                return {
-                    ...item,
-                    mrNo: mrVal,
-                    id: poVal ? `${mrVal}_${poVal}` : `${mrVal}_seed_${index}`,
-                };
-            });
+        if (needsInitialSeed) {
+            try {
+                const response = await fetch('data.json');
+                if (response.ok) {
+                    const initialShipments = await response.json();
+                    if (initialShipments && initialShipments.length > 0) {
+                        shipmentsData = initialShipments.map((item, index) => {
+                            const mrVal = String(item.id || '').trim();
+                            const poVal = String(item.poNo || '').trim();
+                            return {
+                                ...item,
+                                mrNo: mrVal,
+                                id: poVal ? `${mrVal}_${poVal}` : `${mrVal}_seed_${index}`,
+                            };
+                        });
                         try {
-                localStorage.setItem("edc_shipments_data", JSON.stringify(shipmentsData));
-            } catch(e) {
-                if (typeof localforage !== 'undefined') {
-                    localforage.setItem("edc_shipments_data", shipmentsData).catch(err => console.error(err));
+                            localStorage.setItem("edc_shipments_data", JSON.stringify(shipmentsData));
+                        } catch(e) {
+                            if (typeof localforage !== 'undefined') {
+                                localforage.setItem("edc_shipments_data", shipmentsData).catch(err => console.error(err));
+                            }
+                        }
+                    }
                 }
+            } catch(e) {
+                console.error("Failed to load data.json", e);
             }
         }
         
@@ -2260,6 +2270,8 @@ function handleBulkExcelImport(e) {
             alert(`أ¢إ“â€¦ Excel Import Complete!\n\nImported New: ${importedCount}\nUpdated Existing: ${updatedCount}`);
             if (typeof renderShipmentsTable === 'function') renderShipmentsTable();
             if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
+        const overlay = document.getElementById("loading-overlay");
+        if (overlay) overlay.style.display = "none";
             
         } catch(err) {
             console.error("Bulk Import Error:", err);
