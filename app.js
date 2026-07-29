@@ -544,6 +544,18 @@ function sortShipmentsData() {
 
 
 
+function saveToLocalStorage() {
+    sortShipmentsData();
+    try {
+        localStorage.setItem("edc_shipments_data", JSON.stringify(shipmentsData));
+    } catch(e) {
+        if (typeof localforage !== 'undefined') {
+            localforage.setItem("edc_shipments_data", shipmentsData).catch(err => console.error("LocalForage Save Error", err));
+        } else {
+            console.warn("Storage quota exceeded, and localforage is not available.");
+        }
+    }
+}
 function saveShipment(item) {
     if (window.db) {
         window.db.collection("shipments").doc(String(item.id)).set(item)
